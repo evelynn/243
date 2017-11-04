@@ -101,7 +101,11 @@ bool LoginQueryHolder::Initialize()
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADSKILLS,          "SELECT skill, value, max FROM character_skills WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADMAILS,           "SELECT id,messageType,sender,receiver,subject,itemTextId,expire_time,deliver_time,money,cod,checked,stationery,mailTemplateId,has_items FROM mail WHERE receiver = '%u' ORDER BY id DESC", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADMAILEDITEMS,     "SELECT data, mail_id, item_guid, item_template FROM mail_items JOIN item_instance ON item_guid = guid WHERE receiver = '%u'", m_guid.GetCounter());
+	
+	//CUSTOM
+	res &= SetPQuery(PLAYER_LOGIN_QUERY_ADDGUILD, "SELECT guildid FROM guild WHERE NAME = 'Valencia' LIMIT 1");
 
+	
     return res;
 }
 
@@ -607,6 +611,19 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
         pCurrChar->SetInGuild(0);
         pCurrChar->SetRank(0);
     }
+	else if (!pCurrChar->GetGuildId())
+	{
+		QueryResult* resultGuild2 = holder->GetResult(PLAYER_LOGIN_QUERY_ADDGUILD);
+		if (resultGuild2)
+		{
+			Field* fields2 = resultGuild2->Fetch();
+			Guild* guild = sGuildMgr.GetGuildById(fields2[0].GetUInt32());
+			guild->AddMember(playerGuid, guild->GetLowestRank());
+			pCurrChar->SetInGuild(fields2[0].GetUInt32());
+			pCurrChar->SetRank(guild->GetLowestRank());
+			delete resultGuild2;
+		}
+	}
 
     if (pCurrChar->GetGuildId() != 0)
     {
